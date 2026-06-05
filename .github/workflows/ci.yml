@@ -1,4 +1,4 @@
-name: Quantum-Provenance CI
+name: trustMesh CI
 
 on:
   push:
