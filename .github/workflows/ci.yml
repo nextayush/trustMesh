@@ -1,72 +1,128 @@
+```yaml
 name: trustMesh CI
 
 on:
   push:
-    branches: [ main ]
+    branches:
+      - main
   pull_request:
-    branches: [ main ]
+    branches:
+      - main
+
+permissions:
+  contents: read
 
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
 
-    services:
-      # We spin up docker-compose defined services for integration testing
-      # using Github Actions native support or running docker-compose in-step
-      
+    timeout-minutes: 45
+
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
+      - name: Checkout Repository
+        uses: actions/checkout@v4
 
-    - name: Set up JDK 21
-      uses: actions/setup-java@v4
-      with:
-        java-version: '21'
-        distribution: 'temurin'
-        cache: 'maven'
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
 
-    - name: Set up Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20'
-        cache: 'npm'
-        cache-dependency-path: 'contracts/package-lock.json'
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: contracts/package-lock.json
 
-    - name: Install Smart Contract Dependencies
-      run: |
-        cd contracts
-        npm ci
+      - name: Verify Tool Versions
+        run: |
+          java --version
+          mvn --version
+          node --version
+          npm --version
+          docker --version
+          docker compose version
 
-    - name: Compile and Test Smart Contracts
-      run: |
-        cd contracts
-        npx hardhat compile
-        npx hardhat test
+      - name: Install Smart Contract Dependencies
+        working-directory: contracts
+        run: npm ci
 
-    - name: Extract ABIs & BINs
-      run: |
-        cd contracts
-        node scripts/extract-abi-bin.js
+      - name: Compile Smart Contracts
+        working-directory: contracts
+        run: npx hardhat compile
 
-    - name: Spin Up Local Stack (Postgres, Vault, MinIO, Kafka)
-      run: |
-        docker compose -f infra/docker/docker-compose.yml up -d
-        # Give some time for services to boot
-        sleep 15
+      - name: Run Smart Contract Tests
+        working-directory: contracts
+        run: npx hardhat test
 
-    - name: Setup Local Environment Configs
-      run: |
-        chmod +x infra/scripts/setup-local-env.sh
-        # Run inside bash
-        ./infra/scripts/setup-local-env.sh
+      - name: Extract ABI and BIN Files
+        working-directory: contracts
+        run: node scripts/extract-abi-bin.js
 
-    - name: Generate Web3j Bindings & Build Java Microservices
-      run: |
-        # Download local maven to build/generate
-        # For simplicity, maven caching is handled via setup-java
-        mvn clean install -U "-Dnet.bytebuddy.experimental=true"
+      - name: Start infrastructure Stack
+        run: |
+          docker compose -f infra/docker/docker-compose.yml up -d
 
-    - name: Run E2E Integration Tests
-      run: |
-        # Execute integration suites
-        mvn test -pl services/crypto-service,services/storage-service,services/blockchain-service,services/shipment-service "-Dnet.bytebuddy.experimental=true"
+      - name: Show Running Containers
+        run: docker ps -a
+
+      - name: Wait for infrastructure Startup
+        run: |
+          echo "Waiting for services to initialize..."
+          sleep 60
+
+      - name: Verify infrastructure Health
+        run: |
+          docker ps
+          docker compose -f infra/docker/docker-compose.yml ps
+
+      - name: Setup Local Environment
+        run: |
+          chmod +x infra/scripts/setup-local-env.sh
+          bash infra/scripts/setup-local-env.sh
+
+      - name: Build All Maven Modules
+        run: |
+          mvn clean install \
+            -DskipTests \
+            -Dnet.bytebuddy.experimental=true \
+            --batch-mode
+
+      - name: Run Unit Tests
+        run: |
+          mvn test \
+            -Dnet.bytebuddy.experimental=true \
+            --batch-mode
+
+      - name: Run Integration Tests
+        run: |
+          mvn verify \
+            -pl services/crypto-service,\
+services/storage-service,\
+services/blockchain-service,\
+services/shipment-service \
+            -Dnet.bytebuddy.experimental=true \
+            --batch-mode
+
+      - name: Upload Test Reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports
+          path: |
+            **/target/surefire-reports/**
+            **/target/failsafe-reports/**
+          retention-days: 7
+
+      - name: Collect Docker Logs
+        if: failure()
+        run: |
+          docker compose -f infra/docker/docker-compose.yml logs
+
+      - name: Shutdown infrastructure
+        if: always()
+        run: |
+          docker compose -f infra/docker/docker-compose.yml down -v
+```
