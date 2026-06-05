@@ -1,0 +1,66 @@
+# Target directories (Maven build output)
+**/target/
+**/target-ide/
+
+# Maven binary distribution folder
+/maven/
+
+# Node dependencies (npm/yarn/pnpm)
+**/node_modules/
+
+# Hardhat & Smart Contract compilation / generator outputs
+**/artifacts/
+**/cache/
+**/typechain-types/
+**/build-raw/
+**/generated/
+.openzeppelin/
+
+# Compiled class & package files
+*.class
+*.jar
+*.war
+*.nar
+*.ear
+*.zip
+*.tar.gz
+*.rar
+
+# Log files
+*.log
+
+# Crash logs
+hs_err_pid*
+replay_pid*
+
+# IntelliJ IDEA
+.idea/
+*.iml
+*.iws
+*.ipr
+out/
+
+# Eclipse
+.metadata/
+.classpath
+.project
+.settings/
+*.launch
+bin/
+
+# Visual Studio Code
+.vscode/
+
+# OS-specific files
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+.DS_Store
+
+# Local configuration / Environment files
+.env
+.env.local
+.env.*.local
+Quantum-Provenance.md

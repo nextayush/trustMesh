@@ -1,0 +1,21 @@
+{
+  "name": "quantum-provenance-contracts",
+  "version": "1.0.0",
+  "description": "Smart contracts for Quantum-Provenance trust layer",
+  "main": "index.js",
+  "scripts": {
+    "compile": "npx hardhat compile",
+    "test": "npx hardhat test",
+    "node": "npx hardhat node",
+    "deploy:local": "npx hardhat run scripts/deploy-core.ts --network localhost",
+    "deploy:sepolia": "npx hardhat run scripts/deploy-core.ts --network sepolia"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^4.0.0",
+    "dotenv": "^17.4.2",
+    "hardhat": "^2.22.3"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "^5.0.2"
+  }
+}

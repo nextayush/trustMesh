@@ -1,0 +1,17 @@
+{
+  "policyName": "Customs Authority Access Rule",
+  "resource": "shipment",
+  "action": "VIEW_MANIFEST",
+  "conditions": [
+    {
+      "attribute": "organization",
+      "operator": "EQUALS",
+      "value": "Customs"
+    },
+    {
+      "attribute": "clearanceLevel",
+      "operator": "GREATER_THAN_OR_EQUAL",
+      "value": "3"
+    }
+  ]
+}

@@ -1,0 +1,72 @@
+name: Quantum-Provenance CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    services:
+      # We spin up docker-compose defined services for integration testing
+      # using Github Actions native support or running docker-compose in-step
+      
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up JDK 21
+      uses: actions/setup-java@v4
+      with:
+        java-version: '21'
+        distribution: 'temurin'
+        cache: 'maven'
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+        cache-dependency-path: 'contracts/package-lock.json'
+
+    - name: Install Smart Contract Dependencies
+      run: |
+        cd contracts
+        npm ci
+
+    - name: Compile and Test Smart Contracts
+      run: |
+        cd contracts
+        npx hardhat compile
+        npx hardhat test
+
+    - name: Extract ABIs & BINs
+      run: |
+        cd contracts
+        node scripts/extract-abi-bin.js
+
+    - name: Spin Up Local Stack (Postgres, Vault, MinIO, Kafka)
+      run: |
+        docker compose -f infra/docker/docker-compose.yml up -d
+        # Give some time for services to boot
+        sleep 15
+
+    - name: Setup Local Environment Configs
+      run: |
+        chmod +x infra/scripts/setup-local-env.sh
+        # Run inside bash
+        ./infra/scripts/setup-local-env.sh
+
+    - name: Generate Web3j Bindings & Build Java Microservices
+      run: |
+        # Download local maven to build/generate
+        # For simplicity, maven caching is handled via setup-java
+        mvn clean install -U "-Dnet.bytebuddy.experimental=true"
+
+    - name: Run E2E Integration Tests
+      run: |
+        # Execute integration suites
+        mvn test -pl services/crypto-service,services/storage-service,services/blockchain-service,services/shipment-service "-Dnet.bytebuddy.experimental=true"
