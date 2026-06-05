@@ -1,4 +1,3 @@
-```yaml
 name: trustMesh CI
 
 on:
@@ -125,4 +124,3 @@ services/shipment-service \
         if: always()
         run: |
           docker compose -f infra/docker/docker-compose.yml down -v
-```
